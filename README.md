@@ -1,116 +1,101 @@
 # Bluetooth Dual Boot Pairing Helper
 
-A Python script to make it easy to transfer Bluetooth pairing keys from Windows to Linux, enabling seamless Bluetooth device usage when dual-booting between Windows and Linux. This script supports both Bluetooth Low Energy (LE) and classic Bluetooth devices.  The script does not modify any files itself, so it is extremely safe to use.
+A Python script to easily transfer Bluetooth pairing keys from Windows to Linux, enabling seamless device usage when dual-booting. Supports both Bluetooth Low Energy (LE) and classic Bluetooth. The script is safe to use as it does not modify any files directly.
 
 ## Table of Contents
 - [Background](#background)
+- [Quickstart](#quickstart)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Examples](#examples)
+- [Example Run](#example-run)
 - [Notes](#notes)
 - [References](#references)
 - [License](#license)
 
 ## Background
 
-When dual-booting Windows and Linux, you might find that you need to re-pair your Bluetooth devices every time you switch operating systems. This occurs because each OS maintains its own set of Bluetooth pairing keys, making it impossible for devices to recognize both systems simultaneously.
+When dual-booting Windows and Linux, you may need to re-pair Bluetooth devices each time you switch OS. This is due to both OSes having different sets of Bluetooth pairing keys. This script helps you transfer pairing keys from Windows to Linux, keeping devices paired across both systems.
 
-This script simplifies the process of transferring Bluetooth pairing keys from Windows to Linux, allowing your devices to stay paired across both operating systems without the need for re-pairing.
+## Quickstart
 
-The solution draws inspiration from the StackExchange thread:
+Run the script quickly with `curl` or `wget`:
 
-- Bluetooth pairing on dual-boot of Windows & Linux Mint/Ubuntu: Stop having to pair each time
+```bash
+curl -O https://raw.githubusercontent.com/nbanks/bluetooth-dualboot/refs/heads/main/bluetooth-dualboot.py
+chmod +x bluetooth-dualboot.py
+./bluetooth-dualboot.py
+```
 
 ## Features
 
-- Supports both Bluetooth LE and classic Bluetooth devices.
-- Extracts Bluetooth pairing keys from the Windows registry.
-- Converts keys into the format required by the Linux Bluetooth stack.
-- Provides step-by-step instructions for key extraction and script usage.
-- Outputs ready-to-use configuration sections for the Linux Bluetooth info file.
-- Designed to be cut-and-paste friendly, minimizing errors and streamlining the process.
-- Compatible with most Python versions (Python 3 recommended).
+- Supports Bluetooth LE and classic devices.
+- Extracts Bluetooth keys from Windows registry.
+- Converts keys to Linux-compatible format.
+- Provides step-by-step key extraction guidance.
+- Outputs ready-to-use config for Linux Bluetooth info files.
+- Python 3 recommended.
 
 ## Prerequisites
 
-- Python 3 installed on your Linux system.
-- Access to the Windows registry files (from a Windows installation on the same machine).
-- The `chntpw` utility installed on Linux to read the Windows registry:
-
+- Python 3 installed on Linux.
+- Access to Windows registry files (from a Windows installation).
+- `chntpw` to read Windows registry:
+  
   ```bash
   sudo apt-get install chntpw  # Ubuntu/Debian
   sudo pacman -S chntpw        # Arch Linux
   ```
-- Basic familiarity with the command line on Linux.
 
-## Installation
-
-1. **Download the Script**
-
-   Clone this repository or download the `bluetooth-dual-boot.py` script directly:
-
-   ```bash
-   wget https://raw.githubusercontent.com/nbanks/bluetooth-dualboot/refs/heads/main/bluetooth-dualboot.py
-   ```
-
-2. **Make the Script Executable**
-
-   ```bash
-   chmod +x bluetooth-dual-boot.py
-   ```
-
-3. **(Optional) Place the Script in Your PATH**
-
-   To make it easier to run, you can place the script in a directory in your PATH, such as `/usr/local/bin`:
-
-   ```bash
-   sudo mv bluetooth-dual-boot.py /usr/local/bin/
-   ```
+- Basic familiarity with Linux command line.
 
 ## Usage
 
-### Step 1: Extract Bluetooth Keys from Windows Registry
+### Step 1: Pair Device in Linux
+
+1. **Boot into Linux** and pair your Bluetooth device as you normally would. This will generate the `/var/lib/bluetooth/<AdapterMAC>/<DeviceMAC>/info` file, which will be modified later.
+2. Take Note of Adapter and Device MAC Addresses, though some devices change addresses whenever they're paired.  You need to find the correct info file and associate it with the MAC address from step 2.
+
+### Step 2: Boot into Windows and Pair Device
+
+1. **Boot into Windows** and pair the same Bluetooth device. This ensures that the device is properly registered in Windows and its pairing keys are stored in the registry.
+2. To minimize confusion, you may keep other Bluetooth devices disabled or disconnected to easily locate the device in later steps.
+
+### Step 3: Extract Bluetooth Keys from Windows Registry
 
 #### Using `chntpw` on Linux
 
-1. **Mount Your Windows Partition**
-
-   Identify your Windows system partition:
+1. **Mount Windows Partition**
 
    ```bash
    sudo fdisk -l
-   ```
-
-   Create a mount point and mount the partition (replace `/dev/sdX` with your partition identifier):
-
-   ```bash
    sudo mkdir /mnt/windows
    sudo mount -t ntfs-3g -o ro /dev/sdX /mnt/windows
    ```
 
-2. **Navigate to the Windows Registry System Hive**
+2. **Navigate to Registry Hive**
 
    ```bash
    cd /mnt/windows/Windows/System32/config
    ```
 
-3. **Open the Windows Registry with `chntpw`**
+3. **Open Registry with `chntpw`**
 
    ```bash
    sudo chntpw -e SYSTEM
    ```
 
-4. **Extract the Required Keys**
+4. **Extract Keys**
 
-   In the `chntpw` interactive console, run the following commands:
+   Run commands to navigate to and extract Bluetooth keys. Leave this window open to cut-and-paste values:
 
    ```
    cd ControlSet001\Services\BTHPORT\Parameters\Keys
    ls
-   cd <AdapterMAC>  # Replace with your adapter's MAC address
-   cd <DeviceMAC>   # Replace with your device's MAC address (e.g., for a mouse or keyboard)
+   cd <AdapterMAC>
+   ls
+   cd <DeviceMAC>
    hex LTK
    hex KeyLength
    hex ERand
@@ -120,41 +105,21 @@ The solution draws inspiration from the StackExchange thread:
    hex CSRKInbound
    ```
 
-   *Note: If `ControlSet001` does not exist, try `CurrentControlSet`.*
+   *Note: Try `CurrentControlSet` if `ControlSet001` is unavailable.*
 
-   Record the output of each `hex` command; you will need this information when running the script.
+### Step 4: Run the Script
 
-### Step 2: Run the Script and Input the Keys
+```bash
+./bluetooth-dualboot.py
+```
 
-1. **Run the Script**
+The script will prompt for the extracted keys, generating output for the Linux Bluetooth info file. Typically, you will cut-and-paste from the registry to the script and cut-and-paste from the script to the info file.
 
-   ```bash
-   ./bluetooth-dual-boot.py
-   ```
+### Step 5: Update the `info` File
 
-2. **Follow the Prompts**
+Hint: The script will provide the location of the info file if you provide a MAC address.
 
-   The script will guide you through entering the extracted keys. It will ask for:
-   - Device's MAC address (no separators, e.g., `D01B1261DA93`)
-   - LTK
-   - KeyLength
-   - ERand
-   - EDIV
-   - IRK
-   - CSRK
-   - CSRKInbound (optional)
-
-3. **Copy the Output**
-
-   The script will generate the sections you need to add to your Linux Bluetooth info file, which is typically located at:
-
-   ```bash
-   /var/lib/bluetooth/<AdapterMAC>/<DeviceMAC>/info
-   ```
-
-### Step 3: Update the `info` File
-
-1. **Backup the Existing `info` File**
+1. **Backup Existing File**
 
    ```bash
    sudo cp /var/lib/bluetooth/<AdapterMAC>/<DeviceMAC>/info /var/lib/bluetooth/<AdapterMAC>/<DeviceMAC>/info.backup
@@ -166,25 +131,21 @@ The solution draws inspiration from the StackExchange thread:
    sudo nano /var/lib/bluetooth/<AdapterMAC>/<DeviceMAC>/info
    ```
 
-3. **Paste the Output from the Script**
-
-   Replace or add the sections provided by the script into the `info` file.
+3. **Paste the Script Output**
 
 4. **Save and Exit**
 
-### Step 4: Restart the Bluetooth Service
+### Step 6: Restart Bluetooth Service
 
 ```bash
 sudo systemctl restart bluetooth
 ```
 
-### Step 5: Test the Device
+### Step 7: Test Device
 
-Your Bluetooth device should now work seamlessly on Linux without needing to re-pair every time you switch from Windows.
+Device should now be paired on Linux. You should not have to put the device in pairing mode again because it was already paired in Windows.
 
-## Examples
-
-Example Run:
+## Example Run
 
 ```diff
 - User entered data in red
@@ -276,27 +237,21 @@ sudo systemctl restart bluetooth
 
 ## Notes
 
-- **Compatibility**: This script should work with most Python 3 versions.
-- **Safety**: The script does not modify any system files automatically; you need to manually copy the output to your `info` file.
-- **Backup**: Always back up your existing `info` files before making changes.
-- **Permissions**: You might need to run the script and edit files with `sudo` to have the necessary permissions.
-- **Restart Required**: Remember to restart the Bluetooth service after updating the `info` file.
+- **Safety**: The script doesn't modify files directly; users need to manually copy output to the `info` file.
+- **Backup**: Always back up existing `info` files.
+- **Permissions**: You may need `sudo` for file edits.
+- **Restart Required**: Restart Bluetooth service after updating the `info` file.
 
 ## References
-This supports LE:
+Supports LE:
 - [Arch Linux Wiki: Bluetooth - Dual Boot Pairing](https://wiki.archlinux.org/title/Bluetooth#Dual_boot_pairing)
-These do not support LE:
-- [StackExchange Thread: Bluetooth pairing on dual-boot of Windows & Linux Mint/Ubuntu: Stop having to pair each time](https://unix.stackexchange.com/questions/255509/bluetooth-pairing-on-dual-boot-of-windows-linux-mint-ubuntu-stop-having-to-p)
-- [bt-dualboot GitHub repository](https://github.com/x2es/bt-dualboot)
+
+Does not support LE:
+- [StackExchange: Bluetooth pairing on dual-boot](https://unix.stackexchange.com/questions/255509/bluetooth-pairing-on-dual-boot-of-windows-linux-mint-ubuntu-stop-having-to-p)
+- [bt-dualboot GitHub](https://github.com/x2es/bt-dualboot)
 
 ## License
 
 This project is licensed under the GNU General Public License v3.0.
 
-This script aims to simplify maintaining Bluetooth device pairings across dual-boot systems. By following the instructions and using the script, you should be able to avoid the hassle of re-pairing your devices every time you switch between Windows and Linux.
-
-If you encounter issues or have suggestions for improvements, feel free to open an issue or submit a pull request.
-
-### Note to Users
-- Ensure that you comply with the licensing and usage terms of any third-party tools (like `chntpw`) used in this process.
-- Be cautious when handling system files and the Windows registry to avoid unintentional damage to your system.
+Feel free to open issues or submit pull requests or incorporate the code & techniques into automated dualboot pairing projects.
