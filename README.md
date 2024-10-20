@@ -43,7 +43,7 @@ The solution draws inspiration from the StackExchange thread:
   sudo apt-get install chntpw  # Ubuntu/Debian
   sudo pacman -S chntpw        # Arch Linux
   ```
-- Basic familiarity with the command line on both Windows and Linux.
+- Basic familiarity with the command line on Linux.
 
 ## Installation
 
@@ -52,7 +52,7 @@ The solution draws inspiration from the StackExchange thread:
    Clone this repository or download the `bluetooth-dual-boot.py` script directly:
 
    ```bash
-   wget https://raw.githubusercontent.com/yourusername/yourrepository/main/bluetooth-dual-boot.py
+   wget https://raw.githubusercontent.com/nbanks/bluetooth-dualboot/refs/heads/main/bluetooth-dualboot.py
    ```
 
 2. **Make the Script Executable**
@@ -73,7 +73,7 @@ The solution draws inspiration from the StackExchange thread:
 
 ### Step 1: Extract Bluetooth Keys from Windows Registry
 
-#### Option A: Using `chntpw` on Linux (Recommended)
+#### Using `chntpw` on Linux
 
 1. **Mount Your Windows Partition**
 
@@ -110,43 +110,19 @@ The solution draws inspiration from the StackExchange thread:
    cd ControlSet001\Services\BTHPORT\Parameters\Keys
    ls
    cd <AdapterMAC>  # Replace with your adapter's MAC address
-   ls
-   cd <DeviceMAC>   # Replace with your device's MAC address
-   ls
+   cd <DeviceMAC>   # Replace with your device's MAC address (e.g., for a mouse or keyboard)
    hex LTK
    hex KeyLength
    hex ERand
    hex EDIV
    hex IRK
    hex CSRK
+   hex CSRKInbound
    ```
 
    *Note: If `ControlSet001` does not exist, try `CurrentControlSet`.*
 
    Record the output of each `hex` command; you will need this information when running the script.
-
-#### Option B: Using Windows (Alternative)
-
-1. **Boot into Windows**
-2. **Use `regedit` or `psexec` to Access the Registry**
-
-   - Download `psexec` from Microsoft Sysinternals.
-   - Open a command prompt as Administrator.
-   - Run `psexec -s -i regedit.exe`.
-
-3. **Navigate to the Keys**
-
-   Go to `HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\BTHPORT\Parameters\Keys`.
-
-4. **Export the Necessary Keys**
-
-   Locate the keys associated with your Bluetooth adapter and device and note down the values of the following:
-   - LTK
-   - KeyLength
-   - ERand
-   - EDIV
-   - IRK
-   - CSRK
 
 ### Step 2: Run the Script and Input the Keys
 
@@ -166,6 +142,7 @@ The solution draws inspiration from the StackExchange thread:
    - EDIV
    - IRK
    - CSRK
+   - CSRKInbound (optional)
 
 3. **Copy the Output**
 
@@ -211,30 +188,89 @@ Example Run:
 
 ```bash
 $ ./bluetooth-dual-boot.py
-This script will help you convert Bluetooth keys from Windows registry to Linux format.
+This script helps convert Bluetooth keys from Windows to Linux format.
+
+It will not modify any files, but will provide output for you to copy and paste.
+
+# Example: How to extract Bluetooth keys from the Windows registry using 'chntpw'
+# Use the hex value with spaces as shown in Windows registry (e.g. 'C1 22 E9 8B 71 DA 90 C9 45 0E EC 40 52 94 DE 49')
+
+sudo chntpw -e /win/Windows/System32/config/SYSTEM
+cd \ControlSet001\Services\BTHPORT\Parameters\Keys
+ls
+cd <AdapterMAC>  # Replace with your adapter's MAC address
+cd <DeviceMAC>  # Replace with your device's MAC address (e.g., for a mouse or keyboard)
+hex <DeviceMAC>
+
+# Extract values for the following keys:
+hex LTK
+hex KeyLength
+hex ERand
+hex EDIV
+hex IRK
+hex CSRK
+hex CSRKInbound
 
 Enter the device's MAC address (hexadecimal, no separators, e.g., '60abd2916ef6'):
-> C0B51234ABCD
-Formatted MAC address for use in directory: C0:B5:12:34:AB:CD
-Info file: /var/lib/bluetooth/*/C0:B5:12:34:AB:CD/info
-
+> d11b1261da93
+Formatted MAC address for use in directory: D0:1B:12:61:DA:93
 Please enter the following keys as extracted from the Windows registry.
-Only the LinkKey is required for some devices.
-
 If a key is not available or not required, just press Enter to skip.
 
 Enter LTK (or LinkKey from hex <DeviceMAC>):
-> 9A B7 41 6E F3 A1 C9 2E 7F 22 11 0C 4D 5B 63 27
+> C9 96 D4 9E B2 D7 8C E9 A4 69 94 BF E3 5A 71 18
 Enter KeyLength (DWORD in hex, e.g., '10 00 00 00' for 16):
-> 10 00 00 00
+> 10
 Enter ERand (QWORD in hex, 8 bytes):
-> A9 C4 F3 12 77 65 AB 90
+> 3C C0 BE 45 CC 73 1F F0
 Enter EDIV (DWORD in hex, 4 bytes):
-> 3D 8A 00 00
+> 5B 6B 00 00
 Enter IRK:
-> 87 A4 32 1F 45 68 73 A3 92 1C F5 49 71 CF FA 9B
+> 24 48 7C 1F 86 98 48 E3 9E 1B F2 59 96 CF FA 9B
 Enter CSRK:
-> 5D 1B 94 62 09 25 7B BE 91 C3 DB A2 8D 77 E4 59
+> 6D 1F A4 42 06 25 7B BE A1 C3 DB A0 8D 47 E4 59
+Enter CSRKInbound (optional, press Enter to skip):
+> 30 29 53 11 DB F9 57 2C FA 8F FD E0 4B 36 F1 E9
+Warning: Expected 4 bytes, got 1 bytes.
+
+Processing values...
+
+You can try the following outputs in your 'info' file:
+-----------------------------------------------------
+
+=== Standard Processing ===
+
+[IdentityResolvingKey]
+Key=24487C1F869848E39E1BF25996CFFA9B
+
+[LongTermKey]
+Key=C996D49EB2D78CE9A46994BFE35A7118
+EncSize=16
+EDiv=27483
+Rand=17302675614561386556
+Authenticated=0
+
+[LocalSignatureKey]
+Key=6D1FA44206257BBEA1C3DBA08D47E459
+Counter=0
+Authenticated=false
+
+[RemoteSignatureKey]
+Key=30295311DBF9572CFA8FFDE04B36F1E9
+Counter=0
+Authenticated=false
+
+=== Alternative Processing (Reversed Octets) ===
+
+[IdentityResolvingKey]
+Key=9BFACF9659F21B9EE34898861F7C4824
+
+-----------------------------------------------------
+
+Info file: /var/lib/bluetooth/*/D1:1B:12:61:DA:93/info
+
+Remember to restart the Bluetooth service after updating the 'info' file:
+sudo systemctl restart bluetooth
 ```
 
 ## Notes
@@ -246,9 +282,9 @@ Enter CSRK:
 - **Restart Required**: Remember to restart the Bluetooth service after updating the `info` file.
 
 ## References
-- StackExchange Thread: Bluetooth pairing on dual-boot of Windows & Linux Mint/Ubuntu: Stop having to pair each time
-- Arch Linux Wiki: Bluetooth - Dual Boot Pairing
-- `chntpw` Documentation: CHNTPW Registry Editor
+- [Arch Linux Wiki: Bluetooth - Dual Boot Pairing](https://wiki.archlinux.org/title/Bluetooth#Dual_boot_pairing)
+- [StackExchange Thread: Bluetooth pairing on dual-boot of Windows & Linux Mint/Ubuntu: Stop having to pair each time](https://unix.stackexchange.com/questions/255509/bluetooth-pairing-on-dual-boot-of-windows-linux-mint-ubuntu-stop-having-to-p)
+- [bt-dualboot GitHub repository (does not support LE)](https://github.com/x2es/bt-dualboot)
 
 ## License
 
@@ -259,5 +295,5 @@ This script aims to simplify maintaining Bluetooth device pairings across dual-b
 If you encounter issues or have suggestions for improvements, feel free to open an issue or submit a pull request.
 
 ### Note to Users
-- Ensure that you comply with the licensing and usage terms of any third-party tools (like `chntpw` or `psexec`) used in this process.
+- Ensure that you comply with the licensing and usage terms of any third-party tools (like `chntpw`) used in this process.
 - Be cautious when handling system files and the Windows registry to avoid unintentional damage to your system.
