@@ -1,6 +1,6 @@
 # Bluetooth Dual Boot Pairing Helper
 
-A Python script to transfer Bluetooth pairing keys from Windows to Linux, enabling seamless Bluetooth device usage when dual-booting between Windows and Linux. This script supports both Bluetooth Low Energy (LE) and classic Bluetooth devices.
+A Python script to make it easy to transfer Bluetooth pairing keys from Windows to Linux, enabling seamless Bluetooth device usage when dual-booting between Windows and Linux. This script supports both Bluetooth Low Energy (LE) and classic Bluetooth devices.  The script does not modify any files itself, so it is extremely safe to use.
 
 ## Table of Contents
 - [Background](#background)
@@ -186,8 +186,9 @@ Your Bluetooth device should now work seamlessly on Linux without needing to re-
 
 Example Run:
 
-```bash
-$ ./bluetooth-dual-boot.py
+```diff
+- User entered data in red
+
 This script helps convert Bluetooth keys from Windows to Linux format.
 
 It will not modify any files, but will provide output for you to copy and paste.
@@ -212,31 +213,31 @@ hex CSRK
 hex CSRKInbound
 
 Enter the device's MAC address (hexadecimal, no separators, e.g., '60abd2916ef6'):
-> d11b1261da93
+-> d11b1261da93
 Formatted MAC address for use in directory: D0:1B:12:61:DA:93
 Please enter the following keys as extracted from the Windows registry.
 If a key is not available or not required, just press Enter to skip.
 
 Enter LTK (or LinkKey from hex <DeviceMAC>):
-> C9 96 D4 9E B2 D7 8C E9 A4 69 94 BF E3 5A 71 18
+-> C9 96 D4 9E B2 D7 8C E9 A4 69 94 BF E3 5A 71 18
 Enter KeyLength (DWORD in hex, e.g., '10 00 00 00' for 16):
-> 10
+-> 10
 Enter ERand (QWORD in hex, 8 bytes):
-> 3C C0 BE 45 CC 73 1F F0
+-> 3C C0 BE 45 CC 73 1F F0
 Enter EDIV (DWORD in hex, 4 bytes):
-> 5B 6B 00 00
+-> 5B 6B 00 00
 Enter IRK:
-> 24 48 7C 1F 86 98 48 E3 9E 1B F2 59 96 CF FA 9B
+-> 24 48 7C 1F 86 98 48 E3 9E 1B F2 59 96 CF FA 9B
 Enter CSRK:
-> 6D 1F A4 42 06 25 7B BE A1 C3 DB A0 8D 47 E4 59
+-> 6D 1F A4 42 06 25 7B BE A1 C3 DB A0 8D 47 E4 59
 Enter CSRKInbound (optional, press Enter to skip):
-> 30 29 53 11 DB F9 57 2C FA 8F FD E0 4B 36 F1 E9
+-> 30 29 53 11 DB F9 57 2C FA 8F FD E0 4B 36 F1 E9
 Warning: Expected 4 bytes, got 1 bytes.
 
 Processing values...
 
 You can try the following outputs in your 'info' file:
------------------------------------------------------
+ -----------------------------------------------------
 
 === Standard Processing ===
 
@@ -265,7 +266,7 @@ Authenticated=false
 [IdentityResolvingKey]
 Key=9BFACF9659F21B9EE34898861F7C4824
 
------------------------------------------------------
+ -----------------------------------------------------
 
 Info file: /var/lib/bluetooth/*/D1:1B:12:61:DA:93/info
 
@@ -282,9 +283,11 @@ sudo systemctl restart bluetooth
 - **Restart Required**: Remember to restart the Bluetooth service after updating the `info` file.
 
 ## References
+This supports LE:
 - [Arch Linux Wiki: Bluetooth - Dual Boot Pairing](https://wiki.archlinux.org/title/Bluetooth#Dual_boot_pairing)
+These do not support LE:
 - [StackExchange Thread: Bluetooth pairing on dual-boot of Windows & Linux Mint/Ubuntu: Stop having to pair each time](https://unix.stackexchange.com/questions/255509/bluetooth-pairing-on-dual-boot-of-windows-linux-mint-ubuntu-stop-having-to-p)
-- [bt-dualboot GitHub repository (does not support LE)](https://github.com/x2es/bt-dualboot)
+- [bt-dualboot GitHub repository](https://github.com/x2es/bt-dualboot)
 
 ## License
 
