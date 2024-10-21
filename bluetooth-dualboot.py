@@ -81,10 +81,10 @@ def process_bluetooth_keys(key_values):
         dict: A dictionary containing processed Bluetooth key values suitable for Linux.
     """
     outputs = {}
-    
+
     # Process LTK or LinkKey
     ltk = sanitize_hex_string(key_values.get('LTK', ''))
-    outputs['LongTermKey.Key'] = ltk
+    outputs['LTK'] = ltk
     outputs['LinkKey.Key'] = ltk
 
     # Process KeyLength (EncSize)
@@ -95,12 +95,19 @@ def process_bluetooth_keys(key_values):
     # Process ERand
     erand = key_values.get('ERand', '')
     erand_dec = reverse_bytes_and_convert_to_decimal(erand)
-    outputs['LongTermKey.Rand'] = erand_dec if erand_dec else '0'
+    outputs['LongTermKey.Rand'] = erand_dec
 
     # Process EDIV
     ediv_hex = key_values.get('EDIV', '')
     ediv_dec = reverse_bytes_and_convert_to_decimal(ediv_hex, expected_length=4)
-    outputs['LongTermKey.EDiv'] = ediv_dec if ediv_dec else '0'
+    outputs['LongTermKey.EDiv'] = ediv_dec
+
+    # Determine if the device is simple (LinkKey) or complex (LongTermKey)
+    outputs['is_simple_device'] = not (erand_dec and ediv_dec)
+
+    # Process LongTermKey if not a simple device
+    if not outputs['is_simple_device']:
+        outputs['LongTermKey.Key'] = ltk
 
     # Process IRK
     irk = sanitize_hex_string(key_values.get('IRK', ''))
@@ -160,25 +167,32 @@ def display_instructions():
     """
     Displays instructions on how to extract Bluetooth keys from the Windows registry.
     """
-    print("\nThis script helps convert Bluetooth keys from Windows to Linux format.\n")
-    print("It will not modify any files, but will provide output for you to copy and paste.\n")
+    instructions = """
+    This script helps convert Bluetooth keys from Windows to Linux format.
 
-    print("# Example: How to extract Bluetooth keys from the Windows registry using 'chntpw'")
-    print("# Use the hex value with spaces as shown in Windows registry (e.g. 'C1 22 E9 8B 71 DA 90 C9 45 0E EC 40 52 94 DE 49')\n")
-    print("sudo chntpw -e /win/Windows/System32/config/SYSTEM")
-    print("cd \\ControlSet001\\Services\\BTHPORT\\Parameters\\Keys")
-    print("ls")
-    print("cd <AdapterMAC>  # Replace with your adapter's MAC address")
-    print("cd <DeviceMAC>  # Replace with your device's MAC address (e.g., for a mouse or keyboard)")
-    print("hex <DeviceMAC>")
-    print("\n# Extract values for the following keys:")
-    print("hex LTK")
-    print("hex KeyLength")
-    print("hex ERand")
-    print("hex EDIV")
-    print("hex IRK")
-    print("hex CSRK")
-    print("hex CSRKInbound\n")
+    It will not modify any files, but will provide output for you to copy and paste.
+
+    # Example: How to extract Bluetooth keys from the Windows registry using 'chntpw'
+    # Use the hex value with spaces as shown in Windows registry
+    # Example: 'C1 22 E9 8B 71 DA 90 C9 45 0E EC 40 52 94 DE 49'
+
+    sudo chntpw -e /win/Windows/System32/config/SYSTEM
+    cd \\ControlSet001ontrolSet001\\Services\\BTHPORT\\Parameters\\Keys
+    ls
+    cd <AdapterMAC>  # Replace with your adapter's MAC address
+    cd <DeviceMAC>  # Replace with your device's MAC address (e.g., for a mouse or keyboard)
+    hex <DeviceMAC>
+
+    # Extract values for the following keys:
+    hex LTK
+    hex KeyLength
+    hex ERand
+    hex EDIV
+    hex IRK
+    hex CSRK
+    hex CSRKInbound
+    """
+    print(instructions)
 
 def get_mac_address():
     """
@@ -194,7 +208,6 @@ def get_mac_address():
         return formatted_mac
     else:
         return ''  # Return an empty string if no MAC address is provided
-
 
 def collect_user_inputs():
     """
@@ -231,26 +244,18 @@ def display_outputs(outputs, mac_address):
         outputs (dict): A dictionary containing processed Bluetooth key values.
         mac_address (str): The formatted MAC address for the device.
     """
-    print("\nProcessing values...\n")
-    print("You can try the following outputs in your 'info' file:")
-    print("-----------------------------------------------------\n")
+    output = """
+Processing values...
 
-    print("=== Standard Processing ===\n")
-    
+You can try the following outputs in your 'info' file:
+-----------------------------------------------------
+    """
+    print(output)
+
     if outputs['IdentityResolvingKey.Key']:
         print(f"""
 [IdentityResolvingKey]
 Key={outputs['IdentityResolvingKey.Key']}
-""")
-
-    if outputs['LongTermKey.Key']:
-        print(f"""
-[LongTermKey]
-Key={outputs['LongTermKey.Key']}
-EncSize={outputs['LongTermKey.EncSize']}
-EDiv={outputs['LongTermKey.EDiv']}
-Rand={outputs['LongTermKey.Rand']}
-Authenticated=0
 """)
 
     if outputs['LocalSignatureKey.Key']:
@@ -269,13 +274,36 @@ Counter={outputs['RemoteSignatureKey.Counter']}
 Authenticated={outputs['RemoteSignatureKey.Authenticated']}
 """)
 
-    print("=== Alternative Processing (Reversed Octets) ===\n")
-    
-    # Reverse octets for IRK
+    # Output [LongTermKey] for complex devices
+    if not outputs['is_simple_device'] and outputs.get('LongTermKey.Key'):
+        print(f"""
+[LongTermKey]
+Key={outputs['LongTermKey.Key']}
+EncSize={outputs['LongTermKey.EncSize']}
+EDiv={outputs['LongTermKey.EDiv']}
+Rand={outputs['LongTermKey.Rand']}
+Authenticated=0
+""")
+
+    # Output for Standard Bluetooth LE
+    if outputs.get('LongTermKey.Key') and outputs.get('LongTermKey.EDiv') and outputs.get('LongTermKey.Rand'):
+        print("=== Standard Bluetooth LE ===\n")
+        print(f"[LongTermKey]\nKey={outputs['LongTermKey.Key']}\nEncSize={outputs['LongTermKey.EncSize']}\nEDiv={outputs['LongTermKey.EDiv']}\nRand={outputs['LongTermKey.Rand']}\nAuthenticated=0\n")
+
     if outputs.get('IdentityResolvingKey.ReversedOctets'):
+        print("=== Alternative Processing (Reversed Octets) ===\n")
+        # Reverse octets for IRK
         irk_reversed = outputs['IdentityResolvingKey.ReversedOctets']
         if irk_reversed != outputs['IdentityResolvingKey.Key']:
             print(f"[IdentityResolvingKey]\nKey={irk_reversed}\n")
+
+    # Output [LinkKey] for simple devices
+    if outputs['is_simple_device'] and outputs['LinkKey.Key']:
+        print("=== For Simple Devices (LinkKey) ===\n")
+        print("[LinkKey]")
+        print(f"Key={outputs['LinkKey.Key']}")
+        print("Type=4")
+        print("PINLength=0\n")
 
     print("-----------------------------------------------------")
     if mac_address:
